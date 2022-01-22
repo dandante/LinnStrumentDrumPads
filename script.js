@@ -93,10 +93,6 @@ var getParameterList = function() {
         notesList.push(MIDI.noteNumber(valuesList[i]));
     }
     
-    var seq = [];
-    for (var i = 0; i < namesList.length; i++) {
-    		seq.push(i);
-    }
     for (var i = 0; i < defaults.length; i++) {
         paramList.push({
             name: "Region " + (i + 1),
