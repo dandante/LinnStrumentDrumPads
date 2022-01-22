@@ -1,17 +1,23 @@
+Trace("\nLinnStrument Drum Pads");
+Trace("For full documentation, visit");
+Trace("https://github.com/dtenenba/LinnStrumentDrumPads")
+
+
 //ResetParameterDefaults = true;
 
 /*
 
-Set LinnStrument to View to ChPerRow in per-split settings,
-for left split.
-Make sure split mode  is not on.
+LinnStrument Drum Pads
+
+See https://github.com/dtenenba/LinnStrumentDrumPads
+for full documentation and required LinnStrument/Logic Pro settings.
 
 
 */
 
-const DEBUG = true;
+const DEBUG = false;
 
-var debugLog = function(message) {
+var debug = function(message) {
     if (DEBUG) {
         Trace(message);
     }
@@ -69,7 +75,6 @@ var getParameterList = function() {
                     "Hi Tom (A)", // 10
                     "Kick (B)" // 11"
                 ];
-    // var namesList = [];
     var namesKeyIterator = kitPieces.keys();
     var item = namesKeyIterator.next();
     while (!item.done) {
@@ -87,8 +92,6 @@ var getParameterList = function() {
     for (var i = 0; i < valuesList.length; i++) {
         notesList.push(MIDI.noteNumber(valuesList[i]));
     }
-    var min = Math.min(...notesList);
-    var max = Math.max(...notesList);
     
     var seq = [];
     for (var i = 0; i < namesList.length; i++) {
@@ -102,7 +105,6 @@ var getParameterList = function() {
             minValue: 0,
             maxValue: (namesList.length - 1),
             numberOfSteps: namesList.length,
-            //value: MIDI.noteNumber(kitPieces.get(defaults[i])),
             defaultValue: namesList.indexOf(defaults[i]),
         });
     }
@@ -112,20 +114,14 @@ var getParameterList = function() {
 
 
 var PluginParameters = getParameterList();
-PluginParameters.forEach(printParam);
-function printParam(param) {
-//    Trace(param.defaultValue);
-}
-
-
 
 function ParameterChanged(pNum, pVal) {
-//    Trace("parameter changed: " + pNum + " " + pVal);
+   debug("parameter changed: " + pNum + " " + pVal);
    var region = pNum;
    var noteKey = namesList[pVal];
    var noteName = kitPieces.get(noteKey);
    var noteNumber = MIDI.noteNumber(noteName);
-   Trace("Setting pitch for region " + region + " to " + noteKey +"/" + noteName + "/" + noteNumber); 
+   debug("Setting pitch for region " + region + " to " + noteKey +"/" + noteName + "/" + noteNumber); 
    regionPitches[region] = noteNumber;
 }
 
@@ -136,81 +132,10 @@ function inRange(value, min, max) {
 function getRow(channel) {
     var channels = [8,7,6,5,4,3,2,1];
     return channels.indexOf(channel);
-    // return channel -1;
-    // var row = 0;
-    // switch (channel) {
-    //     case 3:
-    //         row = inRange(pitch, 65, 89) ? 0 : 4;
-    //         break;
-    //     case 2:
-    //         row = inRange(pitch, 60, 84) ? 1 : 5;
-    //         break;
-    //     case 4:
-    //         row = inRange(pitch, 55, 79) ? 2 : 6;
-    //         break;
-    //     case 5:
-    //         row = inRange(pitch, 50, 74) ? 3 : 7;            
-    // }
-    /*
-leftmost column, top to bottom:    
-pitch: 65, channel: 8
-pitch: 60, channel: 7
-pitch: 55, channel: 6
-pitch: 50, channel: 5
-pitch: 45, channel: 4
-pitch: 40, channel: 3
-pitch: 35, channel: 2
-pitch: 30, channel: 1
->
-rightmost column, top to bottom:
-pitch: 89, channel: 8
-pitch: 84, channel: 7
-pitch: 79, channel: 6
-pitch: 74, channel: 5
-pitch: 69, channel: 4
-pitch: 64, channel: 3
-pitch: 59, channel: 2
-pitch: 54, channel: 1    
-     */
-    // return row;
 }
-
-/*
-Left split, row channels, top to bottom:
-
-8, 7, 6, 5, 4, 3, 2, 1
-
-Right split, row channels, top to bottom:
-
-16, 15, 14, 13, 12, 11, 10, 9
-
-
-*/
 
 function getColumn(pitch, channel) {
     // returns a column number from 0 to 24
-    /*
-leftmost column, top to bottom:    
-pitch: 65, channel: 8
-pitch: 60, channel: 7
-pitch: 55, channel: 6
-pitch: 50, channel: 5
-pitch: 45, channel: 4
-pitch: 40, channel: 3
-pitch: 35, channel: 2
-pitch: 30, channel: 1
->
-rightmost column, top to bottom:
-pitch: 89, channel: 8
-pitch: 84, channel: 7
-pitch: 79, channel: 6
-pitch: 74, channel: 5
-pitch: 69, channel: 4
-pitch: 64, channel: 3
-pitch: 59, channel: 2
-pitch: 54, channel: 1
-
-     */
     switch (channel) {
         case 8:
             return pitch - 65;
@@ -229,7 +154,7 @@ pitch: 54, channel: 1
         case 1: 
             return pitch - 30;
         default:
-            Trace("should not be here, impossible column");
+            debug("should not be here, impossible column");
     }
 }
 
@@ -240,7 +165,8 @@ function getRegion(row, column) {
     Regions are 4 rows by 4 columns, except the rightmost 
     regions which are 4 rows by 5 columns.
 
-    Regions are numbered from 0 to 11. The regions on the top
+    Regions are numbered from 0 to 11 (but to the end
+    user they are numbered 1 to 12). The regions on the top
     are 0 to 5, and the regions on the bottom are 6 to 11.
     So regions 5 and 11 are the ones with the extra column.
 
@@ -264,49 +190,24 @@ function getRegion(row, column) {
             return region;
         }
     }
-    Trace("should not be here, impossible region");
+    debug("should not be here, impossible region");
 }
 
-function getMapping(channel) {
-    // the basic idea is that lower rows
-    // give lower sounds
-    switch (channel) {
-        case 16:
-            return 23; // B0, kick
-        case 6:
-            return 26; // D1, snare center
-        case 5:
-            return 29; // E1, low tom
-        case 4:
-            return 35; // B1, mid tom
-        case 3:
-            return 28; // E1, snare rimshot
-        case 2:
-            return 32; // G#1, Hi-hat foot close
-        case 1:
-            return 39; // D#2, ride out
-        case 0:
-            return 41; // F2, ride bell
-    }
-    Trace("should not be here");
-}
 
 function HandleMIDI(event) {
     if (event instanceof NoteOn || event instanceof NoteOff) {
         if (event instanceof NoteOn) {
-            Trace("NoteOn");
+            debug("NoteOn");
         } else {
-            Trace("NoteOff");
+            debug("NoteOff");
         }
-        Trace("pitch: " + event.pitch +  ", channel: " + event.channel);
+        debug("pitch: " + event.pitch +  ", channel: " + event.channel);
         row = getRow(event.channel);
-        Trace("row: " + row);
+        debug("row: " + row);
         column = getColumn(event.pitch, event.channel);
-        // event.pitch = getMapping(row);
         var region = getRegion(row, column);
-        Trace("region: " + region);
+        debug("region: " + region);
         event.pitch = regionPitches[region];
         event.send();
     }
-
 }
